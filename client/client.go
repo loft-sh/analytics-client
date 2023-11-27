@@ -21,6 +21,8 @@ const (
 	minUploadInterval = time.Second * 30
 )
 
+var Dry = false
+
 func NewClient() Client {
 	c := &client{
 		endpoint: defaultEndpoint,
@@ -98,10 +100,26 @@ func (c *client) executeUpload(buffer []Event) {
 		return
 	}
 
-	// marshal request
-	marshaled, err := json.Marshal(&Request{
+	// create request object
+	request := &Request{
 		Data: buffer,
-	})
+	}
+
+	// if dry do not send the request and instead just print it
+	if Dry {
+		// marshal request
+		marshaled, err := json.MarshalIndent(request, "", "  ")
+		if err != nil {
+			klog.V(1).ErrorS(err, "failed to json.Marshal analytics request")
+			return
+		}
+
+		klog.InfoS("Send analytics request", "payload", string(marshaled))
+		return
+	}
+
+	// marshal request
+	marshaled, err := json.Marshal(request)
 	if err != nil {
 		klog.V(1).ErrorS(err, "failed to json.Marshal analytics request")
 		return
